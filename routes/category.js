@@ -1,0 +1,79 @@
+const express = require('express')
+const router = express.Router()
+
+const {
+  userById,
+  requireSignIn,
+  isAuth,
+  isAdmin,
+} = require('../controllers/user')
+
+const {
+  Categories,
+  Create,
+  categoryById,
+  read,
+  update,
+  remove,
+  removeCategoryfromOrganisation,
+  getCategoryproducts,
+  removeBulkcategoryfromOrganisation,
+  removeSeletedcategory,
+} = require('../controllers/category')
+
+const { organiById } = require('../controllers/organisation')
+
+router.get('/category/:categoryId/:userId', requireSignIn, isAuth, read)
+
+router.get(
+  '/category/:organiId/:categoryId/:userId',
+  requireSignIn,
+  isAuth,
+  getCategoryproducts
+)
+router.get('/categories/:organiId/:userId', requireSignIn, isAuth, Categories)
+
+router.post(
+  // only admin can access
+  '/category/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  Create
+)
+
+router.put(
+  // only admin can access
+  '/category/:categoryId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  update
+)
+
+// deletes bulk
+router.delete(
+  // only admin can access
+  '/category/bulk/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  removeBulkcategoryfromOrganisation,
+  removeSeletedcategory
+)
+
+router.delete(
+  // only admin can access
+  '/category/:categoryId/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  removeCategoryfromOrganisation,
+  remove
+)
+
+router.param('userId', userById)
+router.param('categoryId', categoryById)
+router.param('organiId', organiById)
+
+module.exports = router
