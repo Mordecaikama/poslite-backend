@@ -1,0 +1,15 @@
+{
+  "weightedVoting": false,
+  "ballotReceipt": false,
+  "ballotConfirmation": true,
+  "loginText": "Welcome",
+  "voteConfirmMsg": "Thank you for voting",
+  "voteConfirmImg": true,
+  "electionEndMsg": "Voting for this election has closed! Please contact your election administrator.",
+  "enableEmail": true,
+  "enableAutomaticLogin": false,
+  "submitBallotConfirmation": true,
+  "hideResults": true,
+  "votersPerPage": 10,
+  "candidateView": "List"
+}

@@ -8,6 +8,8 @@ const {
   isAdmin,
 } = require('../controllers/user')
 
+const { upload } = require('../middleware/multermiddleware')
+
 const {
   Categories,
   Create,
@@ -36,6 +38,7 @@ router.get('/categories/:organiId/:userId', requireSignIn, isAuth, Categories)
 router.post(
   // only admin can access
   '/category/:organiId/:userId',
+  upload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
@@ -45,6 +48,7 @@ router.post(
 router.put(
   // only admin can access
   '/category/:categoryId/:userId',
+  upload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,

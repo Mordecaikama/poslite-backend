@@ -102,7 +102,7 @@ const getOperator = async (req, res) => {
       res.status(200).send({ data: true, token })
     }
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     const errors = handleErrors(error)
     res.send({ errors })
   }

@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const { upload } = require('../middleware/multermiddleware')
-
+const { readPricingfilemiddleware } = require('../controllers/settings')
 const {
   userById,
   create_User,
@@ -20,12 +20,23 @@ const {
   removeSeletedops,
   removeBulkUserfromOrganisation,
   getProfile,
+  confirmEmailCode,
 } = require('../controllers/user')
 
-const { addToOrganisation, organiById } = require('../controllers/organisation')
+const {
+  addToOrganisation,
+  addUserToOrganisation,
+  organiById,
+} = require('../controllers/organisation')
 
 router.post('/signin', get_User)
-router.post('/signup', upload.single('photo'), create_User, addToOrganisation)
+router.post(
+  '/signup',
+  upload.single('photo'),
+  create_User,
+  confirmEmailCode,
+  addToOrganisation
+)
 
 router.post('/verify-email', verifyEmail)
 
@@ -36,7 +47,8 @@ router.post(
   requireSignIn,
   isAuth,
   isAdmin,
-  createOperator
+  createOperator, // creates a new user
+  addUserToOrganisation // adds new user to the organisation
 )
 
 router.get('/profile/:userId', requireSignIn, isAuth, getProfile)

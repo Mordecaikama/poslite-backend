@@ -17,10 +17,13 @@ exports.organiById = (req, res, next, id) => {
 
 //adds user
 exports.addToOrganisation = (req, res) => {
+  // changes permision to admin
   req.body.user = req.profile
   req.body.name = req.profile.name
-  // console.log('request ', req.body)
+  // console.log('request ', req.profile)
   const org = new Organisation(req.body)
+
+  org.users.push(req.body.user._id) // adds user to users field before saving
 
   org
     .save()
@@ -28,12 +31,29 @@ exports.addToOrganisation = (req, res) => {
       // console.log('successfully saved to db')
       // console.log('organisation ', org)
       const { email, _id, ...rest } = org.user
-      console.log('organisation created', org)
+      // console.log('organisation created', org)
       res.send({ data: { user: { email, _id } } })
     })
     .catch((err) => {
       res.send({ data: err })
     })
+}
+
+exports.addUserToOrganisation = (req, res) => {
+  // adds user to users array in organisation
+  var operator = req.user
+  Organisation.findOneAndUpdate(
+    { _id: req.organisation._id },
+    { $push: { users: operator } },
+    { new: true }
+  ).exec((error, data) => {
+    if (error) {
+      return res.status(400).json({
+        error: 'Could not save user to Organisation',
+      })
+    }
+    res.json({ data: true })
+  })
 }
 
 exports.getOrganisation = (req, res) => {

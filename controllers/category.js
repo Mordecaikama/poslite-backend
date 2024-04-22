@@ -117,6 +117,7 @@ exports.removeCategoryfromOrganisation = (req, res, next) => {
 }
 
 exports.Categories = (req, res) => {
+  console.log('something is cooking here ', req.organisation)
   Organisation.findById({ _id: req.organisation._id })
     .populate('category') // pull list of categories from organisation
     .select('category _id')

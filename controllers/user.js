@@ -3,6 +3,11 @@ const Organisation = require('../models/organisation')
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const expressJwt = require('express-jwt')
+var { nanoid } = require('nanoid')
+const { transporter } = require('../helpers/nodeMail')
+const bcrypt = require('bcrypt')
+require('dotenv').config()
+const ejs = require('ejs')
 
 const maxAge = 60 * 4320
 const createToken = (id) => {
@@ -73,7 +78,7 @@ const create_User = (req, res, next) => {
     pimg = req.file.filename
   }
   req.body.img = pimg
-
+  req.body.permission = 'admin'
   const user = new User(req.body)
   user.save((err, data) => {
     if (err) {
@@ -97,24 +102,14 @@ const createOperator = (req, res, next) => {
   }
   req.body.img = pimg
 
-  const operator = new User(req.body)
-  operator.save((err, doc) => {
+  const user = new User(req.body)
+  user.save((err, doc) => {
     if (err) {
       const errors = handleErrors(err)
       res.json({ errors })
     } else {
-      Organisation.findOneAndUpdate(
-        { _id: req.organisation._id },
-        { $push: { users: doc } },
-        { new: true }
-      ).exec((error, data) => {
-        if (error) {
-          return res.status(400).json({
-            error: 'Could not save user to Organisation',
-          })
-        }
-        res.json({ data: true })
-      })
+      req.user = user
+      next()
     }
   })
 }
@@ -133,15 +128,14 @@ const get_User = async (req, res) => {
       maxAge: maxAge * 1000,
       // sameSite: 'None',
     })
+    // console.log('user ', user)
     if (user) {
-      Organisation.find()
-        .populate({ path: 'users', match: { users: user._id } })
+      Organisation.find({ users: { $elemMatch: { $eq: user._id } } })
         .select('_id users ')
         .exec((err, doc) => {
           if (err || !doc) {
             res.status(400).json({ errors: 'No User found' })
           }
-          // console.log(doc, user)
 
           res.status(200).send({
             data: { token, data: { _id: doc[0]._id, user: user?._id } },
@@ -223,7 +217,7 @@ const getUsers = async (req, res) => {
           error: 'No operators found',
         })
       }
-      console.log(operators)
+      // console.log(operators)
       res.json({ data: operators })
     })
 }
@@ -322,6 +316,78 @@ const removeBulkUserfromOrganisation = (req, res, next) => {
   })
 }
 
+// generate email code for verification
+const confirmEmailCode = async (req, res, next) => {
+  const user = req.profile
+
+  // generate code
+  const emailCode = nanoid(5).toUpperCase()
+
+  // ten minuetes ahead
+  var current = new Date().getTime()
+  var ten_minutes_from_now = current + 600000
+
+  User.findOneAndUpdate(
+    { email: user.email },
+    { $set: { code: emailCode } },
+    { new: true },
+    async (err, user) => {
+      if (err) {
+        return res.status(400).json({ errors: 'User not found' })
+      } else {
+        const timers = setTimeout(
+          () =>
+            User.findOne({ email: user.email }).then((us) => {
+              if (!us?.accsetup) {
+                User.findOneAndUpdate(
+                  { email: user.email },
+                  { $set: { codetime_exp: true } },
+                  { new: true },
+                  (data) => {
+                    next()
+                  }
+                )
+              }
+              // console.log('timer triggered')
+            }),
+
+          600000
+        )
+        return () => clearTimeout(timers)
+      }
+    }
+  )
+  // console.log('email something')
+  const data = await ejs.renderFile('./views/confirm.ejs', {
+    username: user.name,
+    userid: user._id,
+    code: emailCode,
+  })
+
+  // console.log(user)
+  const emailData = {
+    from: process.env.Nodemailer_email,
+    to: user.email,
+    subject: 'Password reset code',
+    html: data,
+    // <span style="color:red"> ${resetCode}</span>
+  }
+  // send email
+  // console.log('env ', process.env.Nodemailer_email)
+  transporter.sendMail(emailData, (err, data) => {
+    // console.log(err, data)
+    if (err) {
+      res.json({
+        errors: false,
+        err,
+      })
+    } else {
+      // console.log(data)
+      next()
+    }
+  })
+}
+
 const getProfile = (req, res) => {
   res.json({ data: req.profile })
 }
@@ -348,4 +414,5 @@ module.exports = {
   removeBulkUserfromOrganisation,
   createOperator,
   getProfile,
+  confirmEmailCode,
 }

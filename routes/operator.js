@@ -11,7 +11,10 @@ const {
   removeBulkopsfromOrganisation,
   removeSeletedops,
 } = require('../controllers/operator')
-const { organiById } = require('../controllers/organisation')
+const {
+  organiById,
+  addUserToOrganisation,
+} = require('../controllers/organisation')
 
 const { createOperator } = require('../controllers/user')
 
@@ -37,7 +40,8 @@ router.post(
   requireSignIn,
   isAuth,
   isAdmin,
-  createOperator
+  createOperator,
+  addUserToOrganisation
 )
 router.put(
   '/operator/:operatorId/:organiId',

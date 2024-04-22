@@ -113,8 +113,7 @@ exports.getStatusValues = (req, res) => {
 }
 
 exports.remove = (req, res) => {
-  // console.log(JSON.stringify(req.body))
-  let table = req.Table
+  let table = req.table
   table.remove((err, doc) => {
     if (err) {
       res.status(400).json({
@@ -126,7 +125,7 @@ exports.remove = (req, res) => {
 }
 
 exports.updateTable = (req, res) => {
-  Table.updateOne(
+  Table.findOneAndUpdate(
     { _id: req.table.id },
     { $set: req.body },
     { new: true },
@@ -173,19 +172,17 @@ exports.removeTablefromOrganisation = (req, res, next) => {
   const organi = req.organisation
   const tid = table._id.toString()
   const oid = organi._id.toString()
-  // console.log(organi, category, oid)
-  Organisation.findOneAndUpdate(
-    { _id: oid },
-    // { $in: { candidates: candidate._id } },
-    { $pull: { tables: tid } }
-    // { new: true }
-  ).exec((err, data) => {
-    if (err) {
-      res.json({ err })
+  // console.log(table, oid, req.params)
+
+  Organisation.findOneAndUpdate({ _id: oid }, { $pull: { tables: tid } }).exec(
+    (err, data) => {
+      if (err) {
+        res.json({ err })
+      }
+      next()
     }
-    // res.json({ data })
-    next()
-  })
-  // res.json({ dt: 'not' })
-  // next()
+  )
 }
+
+// { $in: { candidates: candidate._id } },
+// { new: true }

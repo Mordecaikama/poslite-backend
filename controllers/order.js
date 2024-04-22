@@ -44,6 +44,7 @@ exports.orderById = (req, res, next, id) => {
 exports.create = (req, res, next) => {
   // console.log(req.body)
   // req.body.order.user = req.profile
+  req.body.createdAt = new Date().toISOString().slice(0, 10)
   const order = new Order(req.body)
   order.save((error, data) => {
     if (error) {
@@ -93,7 +94,7 @@ exports.listOrders = (req, res) => {
       },
       match: {
         operator: req.body.operator,
-        createdAt: { $gte: req.body.date },
+        createdAt: { $gte: req.body.date, $lte: req.body.date },
       },
       // createdAt: new Date('2023-11-18T00:00:00.000+0000'),
       // createdAt: { $gte: req.body.date },
