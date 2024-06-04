@@ -420,7 +420,7 @@ const setUpOpEmail = async (req, res, next) => {
         err,
       })
     } else {
-      console.log('successfully sent')
+      // console.log('successfully sent')
       next()
     }
   })

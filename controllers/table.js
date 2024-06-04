@@ -20,7 +20,7 @@ const handleErrors = (err) => {
 }
 
 exports.tableId = (req, res, next, id) => {
-  console.log('tables', id)
+  // console.log('tables', id)
   Table.findById(id).exec((err, table) => {
     if (err || !table) {
       return res.status(400).json({

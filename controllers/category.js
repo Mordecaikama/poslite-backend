@@ -195,7 +195,6 @@ exports.getCategoryproducts = (req, res) => {
     .select('products')
     .exec((err, menu) => {
       if (err || !menu) {
-        console.log(err)
         return res.status(400).json({
           error: 'No categories product found',
         })

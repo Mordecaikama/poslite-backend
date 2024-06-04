@@ -265,7 +265,7 @@ exports.updateTableOrder = (req, res, next) => {
 
   Table.updateOne({ name: tb }, { $set: det }, { new: true }, (err, order) => {
     if (err) {
-      console.log(err)
+      // console.log(err)
       return res.json({
         error: 'Table failed to update',
       })
