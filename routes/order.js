@@ -24,7 +24,16 @@ const {
   getStatusValues,
   updateOrderStatus,
   updateTableOrder,
+  ordersOverview,
+  OrdersGraph,
 } = require('../controllers/order')
+
+router.post(
+  '/ordersoverview/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  ordersOverview
+)
 
 router.post(
   '/order/:organiId/:userId',
@@ -36,6 +45,13 @@ router.post(
 )
 
 router.post('/orders/:organiId/:userId', requireSignIn, isAuth, listOrders)
+
+router.post(
+  '/orders-graph/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  OrdersGraph
+)
 
 router.get('/order/status-values', getStatusValues)
 

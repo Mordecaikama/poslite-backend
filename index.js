@@ -15,6 +15,7 @@ const routeCategory = require('./routes/category')
 const routesOrder = require('./routes/order')
 const routesTable = require('./routes/table')
 const routesOperator = require('./routes/operator')
+const routesOrganisation = require('./routes/organisation')
 
 // middleware
 app.use(cookieParser())
@@ -34,6 +35,7 @@ mongoose
     console.log(e)
   })
 
+app.use('/api', routesOrganisation)
 app.use('/api', routeUser)
 app.use('/api', routeProduct)
 app.use('/api', routeCategory)

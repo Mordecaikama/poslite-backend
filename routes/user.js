@@ -2,7 +2,10 @@ const express = require('express')
 const router = express.Router()
 
 const { upload } = require('../middleware/multermiddleware')
-const { readPricingfilemiddleware } = require('../controllers/settings')
+const {
+  readPricingfilemiddleware,
+  readConfigfilemiddleware,
+} = require('../controllers/settings')
 const {
   userById,
   create_User,
@@ -10,6 +13,7 @@ const {
   verifyEmail,
   get_User,
   getUsers, // for non admin users e.g operators
+  getOperators, // admin getting all operators with skip and limit
   isAuth,
   isAdmin,
   requireSignIn,
@@ -21,6 +25,10 @@ const {
   removeBulkUserfromOrganisation,
   getProfile,
   confirmEmailCode,
+  verifyEmailCode,
+  setUpOpAccount,
+  checkOldpassword,
+  setUpOpEmail,
 } = require('../controllers/user')
 
 const {
@@ -34,11 +42,16 @@ router.post(
   '/signup',
   upload.single('photo'),
   create_User,
+  readConfigfilemiddleware,
   confirmEmailCode,
   addToOrganisation
 )
 
 router.post('/verify-email', verifyEmail)
+
+router.post('/confirmooperator/:organiId/:userId', setUpOpAccount, updateUser)
+
+router.post('/confirm-code', verifyEmailCode)
 
 router.post(
   // only admin can access
@@ -48,6 +61,7 @@ router.post(
   isAuth,
   isAdmin,
   createOperator, // creates a new user
+  setUpOpEmail, // setsup user email for account setup
   addUserToOrganisation // adds new user to the organisation
 )
 
@@ -55,6 +69,17 @@ router.get('/profile/:userId', requireSignIn, isAuth, getProfile)
 
 // only admin can access
 router.get('/user/:organiId/:userId', requireSignIn, isAuth, isAdmin, getUsers)
+
+// for admin skip and limit
+router.get(
+  '/users/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  getOperators
+)
+
+router.post('/update/password/:userId', requireSignIn, isAuth, checkOldpassword)
 
 router.put('/user/:userId/:organiId', upload.single('photo'), updateUser)
 

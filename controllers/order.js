@@ -1,7 +1,8 @@
 const { Order } = require('../models/order')
+const mongoose = require('mongoose')
 const Table = require('../models/table')
 const Organisation = require('../models/organisation')
-
+const { ObjectId } = mongoose.Types
 const handleErrors = (err) => {
   let error = {
     table: '',
@@ -72,48 +73,145 @@ exports.remove = (req, res) => {
 }
 
 exports.listOrders = (req, res) => {
-  let limit = req.query.limit ? parseInt(req.query.limit) : 10
-  // let todaysdate = req.body.date ? req.body.filter.date : new Date()
-  // console.log(todaysdate)
-  // console.log(req.body)
+  let limit = req.body.limit ? parseInt(req.body.limit) : 10
+  let skip = req.body.skip ? parseInt(req.body.limit) : 0
+  const op = Object.keys(req.body.operator).length //checks if operator
 
-  // let filter = req.body.operator === 'operator'
+  // console.log()
+  var filter = {}
 
-  // console.log(req.body)
+  if (op) {
+    filter.operator = ObjectId(req.body.operator.toString())
+  }
 
-  Organisation.find({
-    _id: req.organisation._id,
+  if (req.body.dates.length < 2) {
+    // or whatever condition you need
+    // filter.$gte = req.body?.dates[0]
+    filter.createdAt = { $gte: new Date(req.body.dates[0]) }
+  } else {
+    filter.createdAt = {
+      $gte: new Date(req.body.dates[0]),
+      $lte: new Date(req.body.dates[1]),
+    }
+  }
+
+  // console.log(filter)
+
+  // Organisation.find({
+  //   _id: req.organisation._id,
+  // })
+  //   .select('orders')
+  //   .populate({
+  //     path: 'orders',
+  //     select: '-updatedAt',
+  //     populate: {
+  //       path: 'operator',
+  //       select: 'name',
+  //     },
+  //     match: filter,
+  //     options: {
+  //       skip: skip,
+  //       limit: limit,
+  //       sort: { createdAt: -1 },
+  //     },
+  //   })
+  //   .exec((err, ord) => {
+  //     if (err) {
+  //       return res.status(400).json({
+  //         error: 'Orders not found',
+  //       })
+  //     }
+  //     // console.log(ord)
+
+  //     res.send({ data: ord })
+  //   })
+
+  var pipeline = [
+    { $match: { _id: req.organisation._id } },
+    { $project: { orders: 1 } },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'orders',
+        foreignField: '_id',
+        as: 'orders',
+      },
+    },
+    { $unwind: { path: '$orders' } },
+    { $replaceRoot: { newRoot: '$orders' } },
+    {
+      $facet: {
+        totalData: [
+          { $match: filter },
+          { $skip: skip },
+          { $limit: limit },
+          { $sort: { createdAt: 1 } },
+        ],
+        pagination: [{ $count: 'total' }],
+      },
+    },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, doc) => {
+    if (err || !doc) {
+      return res.status(400).json({
+        error: 'No Orders found',
+      })
+    }
+
+    res.json({ data: doc })
   })
-    .select('orders')
-    .populate({
-      path: 'orders',
-      select: '-updatedAt',
-      populate: {
-        path: 'operator',
-        select: 'name',
+}
+exports.OrdersGraph = (req, res) => {
+  // console.log('query ', req.query, 'body ', req.body)
+
+  const op = Object.keys(req.body.operator).length //checks if operator
+
+  var filter = {}
+
+  if (op) {
+    filter.operator = ObjectId(req.body.operator.toString())
+  }
+
+  if (req.body.dates.length < 2) {
+    filter.createdAt = { $gte: new Date(req.body.dates[0]) }
+  } else {
+    filter.createdAt = {
+      $gte: new Date(req.body.dates[0]),
+      $lte: new Date(req.body.dates[1]),
+    }
+  }
+
+  var pipeline = [
+    { $match: { _id: req.organisation._id } },
+    { $project: { orders: 1 } },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'orders',
+        foreignField: '_id',
+        as: 'orders',
       },
-      match: {
-        operator: req.body.operator,
-        createdAt: { $gte: req.body.date, $lte: req.body.date },
+    },
+    { $unwind: { path: '$orders' } },
+    { $replaceRoot: { newRoot: '$orders' } },
+    {
+      $facet: {
+        totalData: [{ $match: filter }, { $sort: { createdAt: 1 } }],
+        pagination: [{ $count: 'total' }],
       },
-      // createdAt: new Date('2023-11-18T00:00:00.000+0000'),
-      // createdAt: { $gte: req.body.date },
-      // },
-      options: {
-        limit: limit,
-        sort: { createdAt: -1 },
-      },
-    })
-    .exec((err, ord) => {
-      if (err) {
-        // console.log(err)
-        return res.status(400).json({
-          error: 'Orders not found',
-        })
-      }
-      // console.log(ord)
-      res.send({ data: ord })
-    })
+    },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, doc) => {
+    if (err || !doc) {
+      return res.status(400).json({
+        error: 'No Orders found',
+      })
+    }
+
+    res.json({ data: doc })
+  })
 }
 
 exports.operatorOrders = (req, res) => {
@@ -175,5 +273,61 @@ exports.updateTableOrder = (req, res, next) => {
 
     next()
     // res.json({ data: 'successful' })
+  })
+}
+
+exports.ordersOverview = (req, res) => {
+  // console.log('pipeline')
+  // let filter = req.query.status === 'all' ? {} : req.query
+  // console.log('body ', req.body)
+
+  const op = Object.keys(req.body.operator).length //checks if operator
+
+  // console.log()
+  var filter = {}
+
+  if (op) {
+    filter.operator = ObjectId(req.body.operator.toString())
+  }
+
+  if (req.body.dates.length < 2) {
+    // or whatever condition you need
+    // filter.$gte = req.body?.dates[0]
+    filter.createdAt = { $gte: new Date(req.body.dates[0]) }
+  } else {
+    filter.createdAt = {
+      $gte: new Date(req.body.dates[0]),
+      $lte: new Date(req.body.dates[1]),
+    }
+  }
+
+  // console.log(filter)
+
+  var pipeline = [
+    {
+      $match: { _id: req.organisation._id },
+    },
+    { $project: { orders: 1 } },
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'orders',
+        foreignField: '_id',
+        as: 'orders',
+      },
+    },
+    { $unwind: { path: '$orders' } },
+    { $replaceRoot: { newRoot: '$orders' } },
+    { $match: filter },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+    // { $match: { operator: req.profile._id } },
+    // { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, data) => {
+    if (err || !data) {
+      res.json({ data: 'No Orders found' })
+    }
+    res.json({ data })
   })
 }

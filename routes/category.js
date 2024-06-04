@@ -12,6 +12,7 @@ const { upload } = require('../middleware/multermiddleware')
 
 const {
   Categories,
+  Cat,
   Create,
   categoryById,
   read,
@@ -34,6 +35,8 @@ router.get(
   getCategoryproducts
 )
 router.get('/categories/:organiId/:userId', requireSignIn, isAuth, Categories)
+
+router.get('/categorys/:organiId/:userId', requireSignIn, isAuth, Cat)
 
 router.post(
   // only admin can access

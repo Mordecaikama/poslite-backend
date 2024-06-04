@@ -30,6 +30,7 @@ const organisationSchema = mongoose.Schema(
       default: 'default.png',
     },
     pricing: {},
+    config: {},
   },
 
   { timestamps: true }

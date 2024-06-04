@@ -7,7 +7,7 @@ const handleErrors = (err) => {
   }
 
   if (err.code === 11000) {
-    error.name = 'this table already exists'
+    error.name = 'Table name is unavailable'
     return error
   }
 
@@ -80,13 +80,11 @@ exports.listTablebySearch = (req, res) => {
 }
 
 exports.listTables = (req, res) => {
-  console.log('SOMETHING HERE ', req.query.sortBy)
-
   let sortBy = req.query.sortBy ? req.query.sortBy : 1
 
   let filter = req.query.status === 'all' ? {} : req.query
 
-  console.log('filter', filter)
+  // console.log(filter)
 
   Organisation.find({ _id: req.organisation._id })
     .select('tables')

@@ -32,6 +32,7 @@ const userSchema = new Schema(
       type: String,
       default: '',
     },
+    cart: [],
     code: '',
     codetime_exp: {
       type: Boolean,
@@ -53,6 +54,7 @@ const userSchema = new Schema(
 
 userSchema.pre('save', async function (next) {
   // before saving it hashes password field
+
   const salt = await bcrypt.genSalt()
   this.password = await bcrypt.hash(this.password, salt)
 
@@ -62,9 +64,9 @@ userSchema.pre('save', async function (next) {
 userSchema.statics.login = async function (email, password) {
   const user = await this.findOne({ email })
   // return users
-
   if (user) {
     const auth = await bcrypt.compare(password, user.password)
+
     if (auth && user.acc_setup) {
       return user
     }

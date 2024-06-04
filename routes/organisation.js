@@ -10,25 +10,35 @@ const {
 } = require('../controllers/user')
 
 const {
-  updateLogo,
+  updateCompany,
   organiById,
   getOrganisation,
+  updateSettings,
 } = require('../controllers/organisation')
-
-router.post(
-  '/updatelogo/:userId/:organiId',
-  upload.single('photo'),
-  requireSignIn,
-  isAuth,
-  isAdmin,
-  updateLogo
-)
 
 router.get(
   '/organisation/:userId/:organiId',
   requireSignIn,
   isAuth,
   getOrganisation
+)
+
+router.put(
+  '/organisation/:userId/:organiId',
+  upload.single('photo'),
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  updateCompany
+)
+
+router.put(
+  '/organisation/settings/:userId/:organiId',
+  upload.single('photo'),
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  updateSettings
 )
 
 router.param('userId', userById) // save user information in all request made using userid

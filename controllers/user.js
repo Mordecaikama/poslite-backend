@@ -5,14 +5,14 @@ const jwt = require('jsonwebtoken')
 const expressJwt = require('express-jwt')
 var { nanoid } = require('nanoid')
 const { transporter } = require('../helpers/nodeMail')
-const bcrypt = require('bcrypt')
+const { hashPassword } = require('../helpers/auth')
 require('dotenv').config()
 const ejs = require('ejs')
 
 const maxAge = 60 * 4320
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.jt, {
-    expiresIn: '20m',
+    expiresIn: '6h',
   })
 }
 
@@ -58,7 +58,7 @@ const handleErrors = (err) => {
 const userById = (req, res, next, id) => {
   // console.log(id, 'userById')
   User.findById(id)
-    .select('name email img permission')
+    .select('name email img permission cart')
     .exec((err, user) => {
       if (err || !user) {
         // console.log(err, id)
@@ -150,6 +150,51 @@ const get_User = async (req, res) => {
 }
 
 // verifies email to be true after code is entered
+const verifyEmailCode = async (req, res) => {
+  const { pin } = req.body
+
+  console.log(req.body)
+
+  User.findOne({ code: req.body.pin })
+    .then((user) => {
+      if (!user) {
+        res.json({ errors: 'Wrong Verification Code' })
+      } else {
+        // if codetime not expired update verification and account
+        if (!user.codetime_exp) {
+          User.findOneAndUpdate(
+            { code: pin },
+            {
+              $set: {
+                code: '',
+                acc_setup: true,
+                acc_verify_at: new Date().getTime(),
+                codetime_exp: false,
+              },
+            },
+            { new: true },
+            async (err, user) => {
+              if (err) {
+                return res
+                  .status(400)
+                  .json({ errors: 'soemthing dey go on has expired' })
+              } else {
+                res.json({ msg: 'successful' })
+              }
+            }
+          )
+        } else {
+          res.json({ errors: 'Code has Expired' })
+        }
+      }
+    })
+    .catch((error) => {
+      // console.log('from catch area ', error)
+      res.json({ errors: 'Code has Expired' })
+    })
+}
+
+// verifies email to be true after code is entered
 const verifyEmail = async (req, res) => {
   const { email } = req.body
 
@@ -183,7 +228,7 @@ const isAuth = (req, res, next) => {
   let user = req.profile && req.auth && req.profile._id == req.auth.id
   if (!user) {
     return res.status(403).json({
-      error: 'Access denied is auth',
+      error: 'Access denied',
     })
   }
   next()
@@ -199,16 +244,15 @@ const isAdmin = (req, res, next) => {
 }
 
 const getUsers = async (req, res) => {
+  const permType = req.query.permission
   // gets organisation data and populate operators then pushes to operatos tab
+  // console.log(req.query)
 
-  // req.query == {permission:'operator/admin/user'}
-  // console.log(req.organisation, 'query ', req.query)
-  // res.json({ data: 'msg' })
   Organisation.findById({ _id: req.organisation._id })
     .populate({
       path: 'users',
       select: 'name email img',
-      match: req.query,
+      match: { permission: permType },
     })
     .select('users')
     .exec((err, operators) => {
@@ -222,6 +266,50 @@ const getUsers = async (req, res) => {
     })
 }
 
+const getOperators = async (req, res) => {
+  const limit = parseInt(req.query.limit)
+  const skip = parseInt(req.query.skip) * limit
+  const permType = req.query.permission
+  var pipeline = [
+    { $match: { _id: req.organisation._id } },
+    { $project: { users: 1 } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'users',
+        foreignField: '_id',
+        as: 'users',
+      },
+    },
+    { $unwind: { path: '$users' } },
+    { $replaceRoot: { newRoot: '$users' } },
+    {
+      $facet: {
+        totalData: [
+          { $match: { permission: permType } },
+          { $project: { name: 1, email: 1, img: 1, acc_setup: 1 } },
+
+          { $skip: skip },
+          { $limit: limit },
+          { $sort: { createdAt: 1 } },
+        ],
+        pagination: [{ $count: 'total' }],
+      },
+    },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, doc) => {
+    if (err || !doc) {
+      console.log(err)
+      return res.status(400).json({
+        error: 'No Users found',
+      })
+    }
+
+    res.json({ data: doc })
+  })
+}
+
 const updateUser = async (req, res) => {
   var pimg
   if (req.file) {
@@ -232,7 +320,6 @@ const updateUser = async (req, res) => {
     const hashedPassword = await hashPassword(req.body.password)
     req.body.password = hashedPassword
   }
-  // console.log(req.profile)
   const { _id, ...rest } = req.profile
   User.findOneAndUpdate(
     { _id: _id },
@@ -247,6 +334,96 @@ const updateUser = async (req, res) => {
       res.json({ data: true })
     }
   )
+}
+
+const checkOldpassword = async (req, res) => {
+  // const user = req.profile
+  // hash user password and compare with db password
+  const { old, newpass } = req.body
+  const hashedPassword = await hashPassword(newpass)
+
+  try {
+    const user = await User.login(req.profile.email, old)
+    if (user) {
+      req.body.password = hashedPassword // changes old to new
+      User.findOneAndUpdate(
+        { _id: req.profile._id },
+        { $set: req.body },
+        {
+          new: true,
+          select: { name: 1, email: 1 },
+        },
+
+        (err, doc) => {
+          if (err) {
+            return res.status(400).json({
+              error: 'user could not be updated',
+            })
+          }
+
+          res.json({ data: doc })
+        }
+      )
+    }
+  } catch (error) {
+    const errors = handleErrors(error)
+    res.send({ errors })
+  }
+
+  // throw Error('incorrect email')
+}
+
+const setUpOpAccount = async (req, res, next) => {
+  // when op sets passwd accout is setup
+  // middleware to setup account
+  const user = req.profile
+
+  User.findOneAndUpdate(
+    { _id: user?._id },
+    {
+      $set: {
+        acc_setup: true,
+      },
+    },
+    { new: true },
+    async (err, user) => {
+      if (err) {
+        return res.status(400).json({ errors: 'User does not exist' })
+      } else {
+        next()
+      }
+    }
+  )
+}
+
+const setUpOpEmail = async (req, res, next) => {
+  const data = await ejs.renderFile('./views/operatoremail.ejs', {
+    username: req.user.name,
+    address: `https://localhost:3000/confirmOperator/${req.organisation._id}/${req.user._id}`,
+    orgName: req.organisation.name, //organisation name
+  })
+
+  const emailData = {
+    from: process.env.Nodemailer_email,
+    to: req.user.email,
+    subject: `Complete Your Account Setup With ${req.organisation.name}`,
+    html: data,
+    // <span style="color:red"> ${resetCode}</span>
+  }
+  // send email
+  // console.log('env ', process.env.Nodemailer_email)
+  transporter.sendMail(emailData, (err, data) => {
+    // console.log(err, data)
+    if (err) {
+      res.json({
+        errors: false,
+        err,
+      })
+    } else {
+      console.log('successfully sent')
+      next()
+    }
+  })
 }
 
 const removeUser = (req, res) => {
@@ -403,9 +580,11 @@ module.exports = {
   create_User,
   get_User,
   getUsers,
+  getOperators,
   isAuth,
   isAdmin,
   verifyEmail,
+  verifyEmailCode,
   logout,
   updateUser,
   removeUser,
@@ -415,4 +594,7 @@ module.exports = {
   createOperator,
   getProfile,
   confirmEmailCode,
+  setUpOpAccount,
+  checkOldpassword,
+  setUpOpEmail,
 }

@@ -35,7 +35,14 @@ exports.read = (req, res) => {
 
 // create category
 exports.Create = (req, res) => {
-  // console.log(req.body)
+  var pimg
+  if (!req.file) {
+    pimg = 'category.png'
+  } else {
+    pimg = req.file.filename
+  }
+  req.body.img = pimg
+
   const category = new Category(req.body)
 
   category
@@ -61,14 +68,18 @@ exports.Create = (req, res) => {
 }
 
 exports.update = (req, res) => {
-  // console.log(req.body)
+  var pimg
+  if (req.file) {
+    pimg = req.file.filename
+    req.body.img = pimg
+  }
+
   Category.findOneAndUpdate(
-    { _id: req.body.id },
+    { _id: req.category._id },
     { $set: req.body },
     { new: true },
     (err, doc) => {
       if (err) {
-        // console.log(err)
         return res.status(400).json({
           error: 'category could not be updated',
         })
@@ -116,8 +127,8 @@ exports.removeCategoryfromOrganisation = (req, res, next) => {
   // next()
 }
 
-exports.Categories = (req, res) => {
-  console.log('something is cooking here ', req.organisation)
+exports.Cat = (req, res) => {
+  // console.log('something is cooking here ', req.organisation)
   Organisation.findById({ _id: req.organisation._id })
     .populate('category') // pull list of categories from organisation
     .select('category _id')
@@ -129,6 +140,49 @@ exports.Categories = (req, res) => {
       }
       res.json({ data: categories })
     })
+}
+
+exports.Categories = (req, res) => {
+  const limit = parseInt(req.query.limit)
+  const skip = parseInt(req.query.skip) * limit
+  // gets organisation data and populate operators then pushes to operatos tab
+
+  var pipeline = [
+    { $match: { _id: req.organisation._id } },
+    { $project: { category: 1 } },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categories',
+      },
+    },
+    { $unwind: { path: '$categories' } },
+    { $replaceRoot: { newRoot: '$categories' } },
+    {
+      $facet: {
+        totalData: [
+          { $match: {} },
+          { $project: { name: 1, img: 1 } },
+          { $skip: skip },
+          { $limit: limit },
+          { $sort: { createdAt: 1 } },
+        ],
+        pagination: [{ $count: 'total' }],
+      },
+    },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, doc) => {
+    if (err || !doc) {
+      return res.status(400).json({
+        error: 'No Categories found',
+      })
+    }
+
+    res.json({ data: doc })
+  })
 }
 
 exports.getCategoryproducts = (req, res) => {

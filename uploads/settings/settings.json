@@ -1,15 +1,13 @@
 {
-  "weightedVoting": false,
-  "ballotReceipt": false,
-  "ballotConfirmation": true,
-  "loginText": "Welcome",
-  "voteConfirmMsg": "Thank you for voting",
-  "voteConfirmImg": true,
-  "electionEndMsg": "Voting for this election has closed! Please contact your election administrator.",
-  "enableEmail": true,
-  "enableAutomaticLogin": false,
-  "submitBallotConfirmation": true,
-  "hideResults": true,
-  "votersPerPage": 10,
-  "candidateView": "List"
+  "productPerpage": 10,
+  "productPaginate": 5,
+  "ordersPerpage": 10,
+  "ordersPaginate": 5,
+  "debitSidebar": false,
+  "menufooter": false,
+  "catPerpage": 10,
+  "catPaginate": 5,
+  "usersPerpage": 10,
+  "usersPaginate": 5,
+  "tax": 0.05
 }

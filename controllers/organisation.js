@@ -20,7 +20,8 @@ exports.addToOrganisation = (req, res) => {
   // changes permision to admin
   req.body.user = req.profile
   req.body.name = req.profile.name
-  // console.log('request ', req.profile)
+  req.body.config = req.appconfig
+  // console.log('request ', req.body)
   const org = new Organisation(req.body)
 
   org.users.push(req.body.user._id) // adds user to users field before saving
@@ -60,42 +61,60 @@ exports.getOrganisation = (req, res) => {
   var id = req.organisation._id.toString()
   // console.log(req.profile, id)
   Organisation.findById(id)
-    .populate({
-      type: 'users',
-      select: 'name email',
-      match: { _id: req.profile._id },
-    })
-    .select('name logo user')
+    .select('name logo user config')
     .exec((err, doc) => {
       if (err || !doc) {
         res.status(400).json({ errors: 'No User found' })
       }
       // console.log(doc)
 
-      res.status(200).send(doc)
+      res.status(200).send({ data: doc })
     })
 }
 
-exports.updateLogo = (req, res) => {
+exports.updateCompany = (req, res) => {
   // console.log(req)
-  var pimg
-  if (!req.file) {
-    pimg = 'default.png'
-  } else {
+  // var pimg
+  // if (!req.file) {
+  //   pimg = 'default.png'
+  // } else {
+  //   pimg = req.file.filename
+  // }
+
+  if (req.file) {
     pimg = req.file.filename
+    req.body.logo = pimg
   }
-  // console.log(pimg)
-  req.body.img = pimg
-  // res.send(req.body)
+
+  // req.body.logo = pimg
 
   Organisation.findOneAndUpdate(
     { _id: req.organisation._id },
     {
-      $set: { logo: pimg },
+      $set: req.body,
     },
     { new: true }
   )
-    .select('logo')
+    .select('name logo')
+    .exec((err, doc) => {
+      if (err) {
+        res.status(400).json({ error: err })
+      }
+      res.json({ data: doc })
+    })
+}
+
+exports.updateSettings = (req, res) => {
+  // console.log(req.body)
+  Organisation.findOneAndUpdate(
+    { _id: req.organisation._id },
+    {
+      $set: req.body,
+    },
+
+    { new: true }
+  )
+    .select('config')
     .exec((err, doc) => {
       if (err) {
         res.status(400).json({ error: err })

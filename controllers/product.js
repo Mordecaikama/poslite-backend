@@ -156,23 +156,68 @@ exports.removeProductfromOrganisation = (req, res, next) => {
 }
 
 exports.Products = (req, res) => {
-  Organisation.findById({ _id: req.organisation._id })
-    .populate({
-      path: 'products',
-      select: 'name price category description img',
-    }) // pull list of categories from organisation
-    .select('products')
-    .exec((err, menu) => {
-      if (err || !menu) {
-        console.log(err)
-        return res.status(400).json({
-          error: 'No categories product found',
-        })
-      }
+  const limit = parseInt(req.query.limit)
+  const skip = parseInt(req.query.skip) * limit
 
-      // console.log(menu)
-      res.json({ data: menu })
-    })
+  // Organisation.findById({ _id: req.organisation._id })
+  //   .populate({
+  //     path: 'products',
+  //     select: 'name price category description img',
+  //     options: {
+  //       limit: req.query.limit,
+  //       skip: req.query.skip * req.query.limit,
+  //       sort: { createdAt: -1 },
+  //     },
+  //   }) // pull list of categories from organisation
+  //   .select('name products')
+  //   .exec((err, menu) => {
+  //     if (err || !menu) {
+  //       console.log(err)
+  //       return res.status(400).json({
+  //         error: 'No categories product found',
+  //       })
+  //     }
+
+  //     console.log(menu)
+  //     res.json({ data: menu })
+  //   })
+
+  var pipeline = [
+    { $match: { _id: req.organisation._id } },
+    { $project: { products: 1 } },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'products',
+        foreignField: '_id',
+        as: 'products',
+      },
+    },
+    { $unwind: { path: '$products' } },
+    { $replaceRoot: { newRoot: '$products' } },
+    {
+      $facet: {
+        totalData: [
+          { $match: {} },
+
+          { $skip: skip },
+          { $limit: limit },
+          // { $sort: { createdAt: 1 } },
+        ],
+        pagination: [{ $count: 'total' }],
+      },
+    },
+  ]
+
+  Organisation.aggregate(pipeline).exec((err, doc) => {
+    if (err || !doc) {
+      return res.status(400).json({
+        error: 'No categories product found',
+      })
+    }
+
+    res.json({ data: doc })
+  })
 }
 
 //  deletes selected array of voters from voters document
