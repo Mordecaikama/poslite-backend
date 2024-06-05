@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt')
 const { isEmail } = require('validator')
 
 const Schema = mongoose.Schema
-const { ObjectId } = mongoose.Schema
 
 const userSchema = new Schema(
   {

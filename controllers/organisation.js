@@ -1,6 +1,6 @@
 const express = require('express')
 const Organisation = require('../models/organisation')
-const User = require('../models/User')
+const User = require('../models/user')
 require('dotenv').config()
 
 exports.organiById = (req, res, next, id) => {

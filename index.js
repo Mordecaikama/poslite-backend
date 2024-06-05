@@ -29,6 +29,7 @@ mongoose
   .connect(process.env.base_db || null) // db is online resource, referenced at the top
   .then((results) => false)
   .catch((e) => {
+    // console.log(e)
     res.json({ error: e })
   })
 
