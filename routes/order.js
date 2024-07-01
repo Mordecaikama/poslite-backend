@@ -26,6 +26,9 @@ const {
   updateTableOrder,
   ordersOverview,
   OrdersGraph,
+  removeBulkordersfromOrganisation,
+  removeSeletedOrders,
+  updateTableBefDel,
 } = require('../controllers/order')
 
 router.post(
@@ -61,6 +64,26 @@ router.put(
   isAuth,
   updateTableOrder,
   updateOrderStatus
+)
+
+// deletes bulk
+router.delete(
+  // only admin can access
+  '/orders/bulk/:organiId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  removeBulkordersfromOrganisation,
+  removeSeletedOrders
+)
+
+router.delete(
+  '/order/:orderId/:userId',
+  requireSignIn,
+  isAuth,
+  isAdmin,
+  updateTableBefDel,
+  remove
 )
 
 router.param('userId', userById)

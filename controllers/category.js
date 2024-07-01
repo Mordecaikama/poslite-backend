@@ -17,15 +17,17 @@ const handleErrors = (err) => {
 
 // middleware
 exports.categoryById = (req, res, next, id) => {
-  Category.findById(id).exec((err, category) => {
-    if (err) {
-      res.status(400).json({
-        error: 'category does not exist',
-      })
-    }
-    req.category = category
-    next()
-  })
+  Category.findById(id)
+    .select('-createdAt -updatedAt')
+    .exec((err, category) => {
+      if (err) {
+        res.status(400).json({
+          error: 'category does not exist',
+        })
+      }
+      req.category = category
+      next()
+    })
 }
 
 // all category
@@ -35,13 +37,13 @@ exports.read = (req, res) => {
 
 // create category
 exports.Create = (req, res) => {
-  var pimg
-  if (!req.file) {
-    pimg = 'category.png'
-  } else {
-    pimg = req.file.filename
-  }
-  req.body.img = pimg
+  // var pimg
+  // if (!req.file) {
+  //   pimg = 'category.png'
+  // } else {
+  //   pimg = req.file.filename
+  // }
+  req.body.img = req.orgimage
 
   const category = new Category(req.body)
 
@@ -68,11 +70,12 @@ exports.Create = (req, res) => {
 }
 
 exports.update = (req, res) => {
-  var pimg
-  if (req.file) {
-    pimg = req.file.filename
-    req.body.img = pimg
-  }
+  // var pimg
+  // if (req.file) {
+  //   pimg = req.file.filename
+  //   req.body.img = pimg
+  // }
+  req.body.img = req.orgimage
 
   Category.findOneAndUpdate(
     { _id: req.category._id },
@@ -131,7 +134,13 @@ exports.Cat = (req, res) => {
   // console.log('something is cooking here ', req.organisation)
   Organisation.findById({ _id: req.organisation._id })
     .populate('category') // pull list of categories from organisation
-    .select('category _id')
+
+    .populate({
+      path: 'category',
+      select: 'name img ',
+      // match: { category: req.category._id },
+    }) // pull list of categories from organisation
+    .select('category')
     .exec((err, categories) => {
       if (err || !categories) {
         return res.status(400).json({

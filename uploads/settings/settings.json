@@ -9,5 +9,6 @@
   "catPaginate": 5,
   "usersPerpage": 10,
   "usersPaginate": 5,
-  "tax": 0.05
+  "tax": 0.05,
+  "catImage": false
 }

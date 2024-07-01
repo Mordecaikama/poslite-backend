@@ -28,6 +28,8 @@ const OrderSchema = new mongoose.Schema(
       default: 'cash',
       enum: ['cash', 'card'],
     },
+    paid: { type: Number },
+    tax: { type: Number },
     updated: Date,
     operator: { type: ObjectId, ref: 'User' },
     customer: { type: String, default: '' },

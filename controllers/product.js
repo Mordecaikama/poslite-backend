@@ -48,13 +48,13 @@ exports.Create = (req, res) => {
   // console.log(req.body)
   var pimg
   var imgs = []
-  if (!req.files.length) {
+  if (!req.file) {
     pimg = ['default.png']
   } else {
-    for (let f of req.files) {
-      imgs.push(f.filename)
-    }
-    pimg = imgs
+    // for (let f of req.orgimage) {
+    //   imgs.push(f)
+    // }
+    pimg = req.orgimage
   }
   req.body.img = pimg
 
@@ -91,14 +91,16 @@ exports.update = (req, res) => {
   // const { _id, ...rest } = req.product
   var pimg
   var imgs = []
-  if (!req.files.length) {
-    pimg = ['default.png']
-  } else {
-    for (let f of req.files) {
-      imgs.push(f.filename)
-    }
-    pimg = imgs
+  if (req.file) {
+    pimg = [req.orgimage]
   }
+
+  // else {
+  //   for (let f of req.files) {
+  //     imgs.push(f.filename)
+  //   }
+  //   pimg = imgs
+  // }
   req.body.img = pimg
 
   // res.json({ data: 'successful' })

@@ -13,7 +13,7 @@ const CategorySchema = new Schema(
     },
     img: {
       type: String,
-      default: 'category.png',
+      default: 'default.png',
     },
   },
   { timestamps: true }

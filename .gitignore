@@ -1,10 +1,13 @@
 .env
 
+serversshkey.pub
+
+.poslite.ppk
+
 /config.js
 
 /node_modules
 
-/serversshkey
 
 /uploads/images
 

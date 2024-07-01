@@ -27,10 +27,12 @@ app.use(express.static('uploads'))
 mongoose.set('strictQuery', false)
 mongoose
   .connect(process.env.base_db || null) // db is online resource, referenced at the top
-  .then((results) => false)
+  .then((results) => {
+    // const res = results.watch()
+    console.log('connected to db successfully')
+  })
   .catch((e) => {
-    // console.log(e)
-    res.json({ error: e })
+    console.log(e)
   })
 
 app.use('/api', routesOrganisation)
@@ -44,14 +46,10 @@ app.use('/api', routesTable)
 const port = process.env.PORT || 8000
 
 // Global error handler that takes 4 arguments and ExpressJS knows that
-// app.use((err, req, res, next) => {
-
-//   res.status(err.status).json(err)
-// })
-
 app.use((err, req, res, next) => {
-  const status = err.status || 500
-  res.status(status)
+  // console.log(err, 'error ocurring')
+
+  res.status(err.status).json(err)
 })
 
-app.listen(port, () => false)
+app.listen(port, () => console.log('Server running on port ', port))

@@ -8,7 +8,9 @@ const {
   isAdmin,
 } = require('../controllers/user')
 
-const { upload } = require('../middleware/multermiddleware')
+const { upload, memupload } = require('../middleware/multermiddleware')
+
+const { addImage, removeCatImage } = require('../middleware/s3middleware')
 
 const {
   Categories,
@@ -41,20 +43,25 @@ router.get('/categorys/:organiId/:userId', requireSignIn, isAuth, Cat)
 router.post(
   // only admin can access
   '/category/:organiId/:userId',
-  upload.single('photo'),
+  // upload.single('photo'),
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
+  addImage,
   Create
 )
 
 router.put(
   // only admin can access
   '/category/:categoryId/:userId',
-  upload.single('photo'),
+  // upload.single('photo'),
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
+  removeCatImage,
+  addImage,
   update
 )
 
@@ -72,10 +79,12 @@ router.delete(
 router.delete(
   // only admin can access
   '/category/:categoryId/:organiId/:userId',
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
   removeCategoryfromOrganisation,
+  removeCatImage,
   remove
 )
 

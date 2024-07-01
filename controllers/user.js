@@ -8,6 +8,7 @@ const { transporter } = require('../helpers/nodeMail')
 const { hashPassword } = require('../helpers/auth')
 require('dotenv').config()
 const ejs = require('ejs')
+const path = require('path')
 
 const maxAge = 60 * 4320
 const createToken = (id) => {
@@ -71,13 +72,14 @@ const userById = (req, res, next, id) => {
 }
 
 const create_User = (req, res, next) => {
-  var pimg
-  if (!req.file) {
-    pimg = 'default.png'
-  } else {
-    pimg = req.file.filename
-  }
-  req.body.img = pimg
+  // var pimg
+  // if (!req.file) {
+  //   pimg = 'default.png'
+  // } else {
+  //   pimg = req.file.filename
+  // }
+
+  req.body.img = req.orgimage
   req.body.permission = 'admin'
   const user = new User(req.body)
   user.save((err, data) => {
@@ -94,14 +96,15 @@ const create_User = (req, res, next) => {
 const createOperator = (req, res, next) => {
   // saves operator info and then saves id to organisation
 
-  var pimg
-  if (!req.file) {
-    pimg = 'default.png'
-  } else {
-    pimg = req.file.filename
-  }
-  req.body.img = pimg
+  // var pimg
+  // if (!req.file) {
+  //   pimg = 'default.png'
+  // } else {
+  //   pimg = req.file.filename
+  // }
+  // req.body.img = pimg
 
+  req.body.img = req.orgimage
   const user = new User(req.body)
   user.save((err, doc) => {
     if (err) {
@@ -311,11 +314,14 @@ const getOperators = async (req, res) => {
 }
 
 const updateUser = async (req, res) => {
-  var pimg
-  if (req.file) {
-    pimg = req.file.filename
-    req.body.img = pimg
-  }
+  // var pimg
+  // if (req.file) {
+  //   pimg = req.file.filename
+  //   req.body.img = pimg
+  // }
+
+  req.body.img = req.orgimage
+  console.log('updating user')
   if (req.body.password) {
     const hashedPassword = await hashPassword(req.body.password)
     req.body.password = hashedPassword
@@ -565,6 +571,119 @@ const confirmEmailCode = async (req, res, next) => {
   })
 }
 
+const checkResetCode = async (req, res) => {
+  const { code } = req.body
+
+  const user = await User.findOne({ code: req.body.code.toUpperCase() })
+
+  // if user not found
+  if (!user) {
+    res.json({ error: 'Reset code is invalid' })
+  } else {
+    user.code = ''
+    await user.save()
+    res.json({ ok: true })
+  }
+}
+
+const forgotPassword = async (req, res) => {
+  //email is reset after 5mins or 300,000
+  const { email } = req.body
+
+  // generate code
+  const resetCode = nanoid(5).toUpperCase()
+
+  User.findOneAndUpdate(
+    { email: email },
+    { $set: { code: resetCode } },
+    { new: true },
+    async (err, user) => {
+      if (err || !user) {
+        return res.json({ errors: 'User does not found' })
+      }
+
+      if (user) {
+        const data = await ejs.renderFile('./views/email.ejs', {
+          username: user.name,
+          code: resetCode,
+        })
+
+        // console.log(user)
+        const emailData = {
+          from: process.env.Nodemailer_email,
+          to: user.email,
+          subject: 'Password reset code',
+          html: data,
+          // <span style="color:red"> ${resetCode}</span>
+        }
+        // send email
+        transporter.sendMail(emailData, (err, data) => {
+          // console.log(err, data)
+          if (err) {
+            res.json({
+              errors: false,
+            })
+          } else {
+            // console.log(data)
+            res.json({
+              msg: true,
+            })
+          }
+        })
+
+        const timers = setTimeout(
+          () =>
+            User.findOne({ email: email }).then((us) => {
+              if (!us?.accsetup) {
+                User.findOneAndUpdate(
+                  { email: email },
+                  { $set: { code: '' } },
+                  { new: true },
+                  (data) => {
+                    // noting
+                  }
+                )
+              }
+            }),
+
+          300000
+        )
+      }
+      return () => clearTimeout(timers)
+    }
+  )
+}
+
+const resetPassword = async (req, res) => {
+  try {
+    // console.log(req.body)
+    const { email, password } = req.body
+    // find user based on email and resetCode
+    const user = await User.findOne({
+      email: email,
+    })
+
+    // if user not found
+    if (!user) {
+      res.json({ error: 'Email or reset code is invalid' })
+    }
+    // if password is short
+    if (!password || password.length < 6) {
+      return res.json({
+        error: 'Password is required and should be 6 characters long or more',
+      })
+    } else {
+      user.password = password
+      user.code = ''
+
+      await user.save()
+      res.json({ ok: true })
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}
+
 const getProfile = (req, res) => {
   res.json({ data: req.profile })
 }
@@ -597,4 +716,7 @@ module.exports = {
   setUpOpAccount,
   checkOldpassword,
   setUpOpEmail,
+  checkResetCode,
+  forgotPassword,
+  resetPassword,
 }

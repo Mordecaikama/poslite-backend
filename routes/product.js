@@ -8,7 +8,7 @@ const {
   isAdmin,
 } = require('../controllers/user')
 
-const { upload } = require('../middleware/multermiddleware')
+const { upload, memupload } = require('../middleware/multermiddleware')
 
 const {
   Products,
@@ -23,15 +23,18 @@ const {
 } = require('../controllers/product')
 
 const { organiById } = require('../controllers/organisation')
+const { addImage, removeProdImage } = require('../middleware/s3middleware')
 
 router.get('/product/:productId/:userId', requireSignIn, isAuth, getProduct)
 
 router.post(
   '/product/:organiId/:userId',
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
-  upload.array('photo', 8),
+  addImage,
+  // upload.array('photo', 8),
   Create
 )
 
@@ -40,7 +43,10 @@ router.put(
   requireSignIn,
   isAuth,
   isAdmin,
-  upload.array('photo', 8),
+  memupload.single('photo'),
+  removeProdImage,
+  addImage,
+  // upload.array('photo', 8),
   update
 )
 
@@ -56,10 +62,12 @@ router.delete(
 
 router.delete(
   '/product/:productId/:organiId/:userId',
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
   removeProductfromOrganisation,
+  removeProdImage, // checks if file exist in aws n deletes it
   remove
 )
 

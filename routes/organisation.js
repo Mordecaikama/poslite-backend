@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { upload } = require('../middleware/multermiddleware')
+const { upload, memupload } = require('../middleware/multermiddleware')
 
 const {
   userById,
@@ -15,6 +15,7 @@ const {
   getOrganisation,
   updateSettings,
 } = require('../controllers/organisation')
+const { removeOrgImage, addImage } = require('../middleware/s3middleware')
 
 router.get(
   '/organisation/:userId/:organiId',
@@ -25,10 +26,13 @@ router.get(
 
 router.put(
   '/organisation/:userId/:organiId',
-  upload.single('photo'),
+  // upload.single('photo'),
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
+  removeOrgImage,
+  addImage,
   updateCompany
 )
 

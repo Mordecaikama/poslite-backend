@@ -82,8 +82,9 @@ exports.updateCompany = (req, res) => {
   // }
 
   if (req.file) {
-    pimg = req.file.filename
-    req.body.logo = pimg
+    // pimg = req.file.filename
+    // req.body.logo = pimg
+    req.body.logo = req.orgimage
   }
 
   // req.body.logo = pimg

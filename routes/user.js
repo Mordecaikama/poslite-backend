@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const { upload } = require('../middleware/multermiddleware')
+const { upload, memupload } = require('../middleware/multermiddleware')
 const {
   readPricingfilemiddleware,
   readConfigfilemiddleware,
@@ -29,6 +29,9 @@ const {
   setUpOpAccount,
   checkOldpassword,
   setUpOpEmail,
+  checkResetCode,
+  forgotPassword,
+  resetPassword,
 } = require('../controllers/user')
 
 const {
@@ -36,11 +39,14 @@ const {
   addUserToOrganisation,
   organiById,
 } = require('../controllers/organisation')
+const { addImage, removeUserImage } = require('../middleware/s3middleware')
 
 router.post('/signin', get_User)
 router.post(
   '/signup',
-  upload.single('photo'),
+  // upload.single('photo'),
+  memupload.single('photo'),
+  addImage,
   create_User,
   readConfigfilemiddleware,
   confirmEmailCode,
@@ -56,10 +62,12 @@ router.post('/confirm-code', verifyEmailCode)
 router.post(
   // only admin can access
   '/operator/:organiId/:userId',
-  upload.single('photo'),
+  // upload.single('photo'),
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
+  addImage,
   createOperator, // creates a new user
   setUpOpEmail, // setsup user email for account setup
   addUserToOrganisation // adds new user to the organisation
@@ -81,7 +89,14 @@ router.get(
 
 router.post('/update/password/:userId', requireSignIn, isAuth, checkOldpassword)
 
-router.put('/user/:userId/:organiId', upload.single('photo'), updateUser)
+router.put(
+  '/user/:userId/:organiId',
+  // upload.single('photo'),
+  memupload.single('photo'),
+  removeUserImage,
+  addImage,
+  updateUser
+)
 
 // deletes bulk
 router.delete(
@@ -98,12 +113,18 @@ router.delete(
   // only admin can access
   // userid for auth, operatorid for particular operator, organiid for particular organisation
   '/user/:userId/:organiId',
+  memupload.single('photo'),
   requireSignIn,
   isAuth,
   isAdmin,
   removeUserfromOrganisation,
+  removeUserImage,
   removeUser
 )
+
+router.post('/check/code', checkResetCode)
+router.post('/reset-password', resetPassword)
+router.post('/forgot-password', forgotPassword)
 
 router.get('/logout/:userId', requireSignIn, isAuth, logout)
 

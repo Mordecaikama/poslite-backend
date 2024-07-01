@@ -45,7 +45,10 @@ exports.orderById = (req, res, next, id) => {
 exports.create = (req, res, next) => {
   // console.log(req.body)
   // req.body.order.user = req.profile
-  req.body.createdAt = new Date().toISOString().slice(0, 10)
+  req.body.createdAt = new Date()
+  // .toISOString().slice(0, 10)
+  // const wt = new Date.split('T')[0]
+  // console.log(new Date().toISOString().slice(0, 10))
   const order = new Order(req.body)
   order.save((error, data) => {
     if (error) {
@@ -74,10 +77,10 @@ exports.remove = (req, res) => {
 
 exports.listOrders = (req, res) => {
   let limit = req.body.limit ? parseInt(req.body.limit) : 10
-  let skip = req.body.skip ? parseInt(req.body.limit) : 0
+  // let skip = req.body.skip ? parseInt(req.body.limit) : 0
+  const skip = parseInt(req.body.skip) * limit
   const op = Object.keys(req.body.operator).length //checks if operator
 
-  // console.log()
   var filter = {}
 
   if (op) {
@@ -86,8 +89,9 @@ exports.listOrders = (req, res) => {
 
   if (req.body.dates.length < 2) {
     // or whatever condition you need
-    // filter.$gte = req.body?.dates[0]
-    filter.createdAt = { $gte: new Date(req.body.dates[0]) }
+    const dte = new Date(req.body.dates[0])
+
+    filter.createdAt = { $gte: dte }
   } else {
     filter.createdAt = {
       $gte: new Date(req.body.dates[0]),
@@ -95,7 +99,7 @@ exports.listOrders = (req, res) => {
     }
   }
 
-  // console.log(filter)
+  // console.log('filter', req.body.dates)
 
   // Organisation.find({
   //   _id: req.organisation._id,
@@ -139,13 +143,28 @@ exports.listOrders = (req, res) => {
     },
     { $unwind: { path: '$orders' } },
     { $replaceRoot: { newRoot: '$orders' } },
+    // { $match: { createdAt: { $gte: new Date() } } },
+
     {
       $facet: {
         totalData: [
           { $match: filter },
           { $skip: skip },
           { $limit: limit },
-          { $sort: { createdAt: 1 } },
+          { $sort: { createdAt: req.body.createdAt === 'asc' ? 1 : -1 } },
+          {
+            $project: {
+              products: 1,
+              amount: 1,
+              tax: 1,
+              table: 1,
+              status: 1,
+              paytype: 1,
+              operator: 1,
+              customer: 1,
+              createdAt: 1,
+            },
+          },
         ],
         pagination: [{ $count: 'total' }],
       },
@@ -158,7 +177,7 @@ exports.listOrders = (req, res) => {
         error: 'No Orders found',
       })
     }
-
+    // console.log(doc)
     res.json({ data: doc })
   })
 }
@@ -257,22 +276,44 @@ exports.updateTableOrder = (req, res, next) => {
   let status = { ...rest, status: orderstatus }
 
   let tb = req.body.table ? req.body.table : req.body.order.table
-  // console.log('body ', status, req.body)
   let det =
     req.body.status === 'Delivered' || req.body.status === 'Cancelled'
       ? { status: 'free', time: '-', customer: '' }
       : status
 
+  // console.log('body ', tb, 'details ', det)
+
   Table.updateOne({ name: tb }, { $set: det }, { new: true }, (err, order) => {
     if (err) {
-      // console.log(err)
+      // console.log('error ', err)
+      return res.json({
+        error: 'Table failed to update',
+      })
+    }
+
+    // console.log(order)
+
+    next()
+    // res.json({ data: 'successful' })
+  })
+}
+
+exports.updateTableBefDel = (req, res, next) => {
+  // checks to update table before delete
+
+  let tb = req.order.table
+  let det = { status: 'free', time: '-', customer: '' }
+
+  // console.log('body ', tb, 'details ', det)
+
+  Table.updateOne({ name: tb }, { $set: det }, { new: true }, (err, order) => {
+    if (err) {
       return res.json({
         error: 'Table failed to update',
       })
     }
 
     next()
-    // res.json({ data: 'successful' })
   })
 }
 
@@ -283,7 +324,7 @@ exports.ordersOverview = (req, res) => {
 
   const op = Object.keys(req.body.operator).length //checks if operator
 
-  // console.log()
+  // console.log('something')
   var filter = {}
 
   if (op) {
@@ -328,6 +369,38 @@ exports.ordersOverview = (req, res) => {
     if (err || !data) {
       res.json({ data: 'No Orders found' })
     }
+    // console.log(data)
     res.json({ data })
+  })
+}
+
+exports.removeSeletedOrders = (req, res) => {
+  // console.log(req.body, 'main')
+  Order.deleteMany({ _id: { $in: req.body } }, (err, data) => {
+    if (err || !data) {
+      return res.status(400).json({
+        error: 'No products found',
+      })
+    }
+    res.json({ data: 'successful' })
+  })
+}
+
+// middleware to delete selected array of voters from election
+exports.removeBulkordersfromOrganisation = (req, res, next) => {
+  const oid = req.organisation._id.toString()
+
+  Organisation.findOneAndUpdate(
+    { _id: oid },
+    // { $in: { candidates: candidate._id } },
+    { $pull: { orders: { $in: req.body } } }
+    // { new: true }
+  ).exec((err, data) => {
+    if (err) {
+      res.json({ error: err })
+      // console.log(err)
+    }
+
+    next()
   })
 }
